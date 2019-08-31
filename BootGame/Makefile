@@ -6,13 +6,17 @@ main.img: main.elf
 	grub-mkrescue -o '$@' iso
 
 # main.elf is the the multiboot file.
-main.elf: entry.o main.o
+main.elf: entry.o main.o lowlevel.o keyb.o
 	ld -m elf_i386 -nostdlib -T linker.ld -o '$@' $^
 
 entry.o: entry.asm
 	nasm -f elf32 '$<' -o '$@'
+lowlevel.o: lowlevel.asm
+	nasm -f elf32 '$<' -o '$@'
 
 main.o: main.c
+	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Istdlib -o '$@' -Wall -Wextra '$<'
+keyb.o: keyb.c
 	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Istdlib -o '$@' -Wall -Wextra '$<'
 
 clean:
