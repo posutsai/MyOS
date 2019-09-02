@@ -17,6 +17,7 @@
 #define PIC_2_DATA 0xA1
 
 void keyboard_handler_int();
+void timer_handler_int();
 void load_idt(void*);
 
 struct idt_entry
@@ -59,10 +60,8 @@ static void initialize_pic()
 	write_port(PIC_2_CTRL, 0x11);
 
 	/* ICW2 - remap offset address of idt_table */
-	/*
-	 *     * In x86 protected mode, we have to remap the PICs beyond 0x20 because
-	 *         * Intel have designated the first 32 interrupts as "reserved" for cpu exceptions
-	 *             */
+	/* In x86 protected mode, we have to remap the PICs beyond 0x20 because
+	 * Intel have designated the first 32 interrupts as "reserved" for cpu exceptions */
 	write_port(PIC_1_DATA, 0x20);
 	write_port(PIC_2_DATA, 0x28);
 
@@ -82,9 +81,9 @@ static void initialize_pic()
 
 void idt_init()
 {
-	    initialize_pic();
-		    initialize_idt_pointer();
-			    load_idt(&idt_ptr);
+	initialize_pic();
+	initialize_idt_pointer();
+	load_idt(&idt_ptr);
 }
 
 enum color {
@@ -170,6 +169,7 @@ int __attribute__((noreturn)) main() {
     clear(BLACK);
 	idt_init();
 	load_idt_entry(0x21, (unsigned long) keyboard_handler_int, 0x08, 0x8e);
+	load_idt_entry(0x20, (unsigned long) timer_handler_int, 0x08, 0x8e);
 	kb_init();
 	struct pg_element playground[FRAME_WIDTH * FRAME_HEIGHT];
 	init_playground(playground);

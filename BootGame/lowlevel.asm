@@ -1,10 +1,12 @@
 section .text
 
 extern keyboard_handler
+extern timer_handler
 global read_port
 global write_port
 global load_idt
 global keyboard_handler_int
+global timer_handler_int
 
 keyboard_handler_int:
     pushad
@@ -12,6 +14,13 @@ keyboard_handler_int:
     call keyboard_handler
     popad
     iretd
+
+timer_handler_int:
+	pushad
+	cld
+	call timer_handler
+	popad
+	iretd
 
 load_idt:
     mov edx, [esp + 4]

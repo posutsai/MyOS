@@ -12,7 +12,7 @@ void kb_init(void)
 
 	/* 0xFD is 11111101 - enables only IRQ1 (keyboard) on master pic
 	 *        by clearing bit 1. bit is clear for enabled and bit is set for disabled */
-	write_port(0x21, curmask_master & 0xFD);
+	write_port(0x21, curmask_master & 0xFC);
 }
 
 /* Maintain a global location for the current video memory to write to */
@@ -36,5 +36,11 @@ void keyboard_handler(void)
 	}
 
 	/* Send End of Interrupt (EOI) to master PIC */
+	write_port(0x20, 0x20);
+}
+
+void timer_handler() {
+	vidptr[current_loc++] = '.';
+	vidptr[current_loc++] = 0x07;
 	write_port(0x20, 0x20);
 }
