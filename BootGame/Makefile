@@ -15,9 +15,9 @@ lowlevel.o: lowlevel.asm
 	nasm -f elf32 '$<' -o '$@'
 
 main.o: main.c
-	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Istdlib -o '$@' -Wall -Wextra '$<'
+	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Iinclude -o '$@' -Wall -Wextra '$<'
 keyb.o: keyb.c
-	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Istdlib -o '$@' -Wall -Wextra '$<'
+	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Iinclude -o '$@' -Wall -Wextra '$<'
 
 clean:
 	rm -f *.elf *.o iso/boot/*.elf *.img
