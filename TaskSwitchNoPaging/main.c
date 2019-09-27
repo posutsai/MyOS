@@ -3,9 +3,8 @@
 #include "stdint.h"
 #include "string.h"
 #include "task.h"
+#include "utils.h"
 
-#define COLS 80
-#define ROWS 25
 #define FRAME_LEFT_TOP_X 30
 #define FRAME_LEFT_TOP_Y 3
 #define FRAME_WIDTH 25
@@ -114,51 +113,10 @@ struct Task get_task0() {
 	return task0;
 }
 
-enum color {
-    BLACK = 0,
-	BLUE = 1,
-	GREEN = 2,
-	CYAN = 3,
-	RED = 4,
-	PURPLE = 5,
-	BROWN = 6,
-	GRAY = 7,
-	DARK_GRAY = 8,
-	LIGHT_BLUE = 9,
-	LIGHT_GREEN = 10,
-	LIGHT_CYAN = 11,
-	LIGHT_RED = 12,
-	LIGHT_PURPLE = 13,
-	YELLOW = 14,
-	WHITE = 15
-};
-
-uint16_t *const video = (uint16_t*) 0xB8000;
-uint16_t loc = 0;
-
-void print_hex_uint32(uint32_t operand) {
-	for (uint8_t i = 8; i > 0; i--) {
-		uint8_t B = operand >> ((i-1) << 2) & 0xF;
-		uint8_t out = B > 9? B + 55: B + 48;
-		video[loc++] = 0x07 << 8 | out;
-	}
-}
-
-void putc(uint8_t x, uint8_t y, enum color fg, enum color bg, char c) {
-    video[y * COLS + x] = (bg << 12) | (fg << 8) | c;
-}
-
-void puts(char *s) {
-    for (; *s; s++)
-       video[loc++] = 0x07 << 8 | *s;
-}
-
 void do_task1() {
 	char *show = "Task1 !!!!";
 	for (uint8_t i = 0; i < 10; i++, loc++) {
-		if (loc == COLS * ROWS)
-			loc = 0;
-		video[loc] = 0x47 << 8 | show[i];
+		puts(show);
 	}
 }
 
@@ -171,11 +129,11 @@ void do_task2() {
 	}
 }
 
-void clear(enum color bg) {
+void clear() {
     uint8_t x, y;
     for (y = 0; y < ROWS; y++)
         for (x = 0; x < COLS; x++)
-            putc(x, y, bg, bg, ' ');
+            putc(' ');
 }
 
 void new_task(struct Task *new_task, struct Task *task0, uintptr_t eip, uintptr_t stack0_addr, uintptr_t stack3_addr) {
@@ -248,7 +206,6 @@ int __attribute__((noreturn)) main() {
 			"movw %%cx,%%fs\n\t" \
 			"movw %%cx,%%gs" \
 			::"b"(LOCAL_CODE_SEL),"c"(LOCAL_DATA_SEL));
-	// The 
 
 	for (;;) {
 		/* __asm__ ("movb    %%al,    0xb8000+160*24"::"a"(wheel[i])); */
