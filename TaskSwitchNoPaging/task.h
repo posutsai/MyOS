@@ -26,6 +26,8 @@
 
 #define INITIAL_PRIORITY 200
 const uint64_t *gdt_start;
+extern void write_tss_descriptor(uint64_t);
+extern void write_ldt_descriptor(uint64_t);
 
 struct TaskStateSeg {
 	uint32_t back_link;
@@ -72,13 +74,20 @@ struct Task {
 	struct Task *next;
 };
 
-void set_tss_descriptor(uint64_t tss_addr) {
+void set_tss(uint64_t tss_addr) {
 	// Constant in  Task State Segment
 	// limit 104 - 1 = 103 byte 0x67
 	uint64_t tss_entry = 0x0080890000000067ULL; // initialize base as 0
 	tss_entry |= ((tss_addr) << 16) & 0xffffff0000ULL;
 	tss_entry |= ((tss_addr) << 32) & 0xff00000000000000ULL;
 	write_tss_descriptor(tss_entry);
+}
+
+void set_ldt(uint64_t ldt_addr) {
+	uint64_t ldt_entry = 0x008082000000000fULL;
+	ldt_entry |= ((ldt_addr)<<16) & 0xffffff0000ULL;
+	ldt_entry |= ((ldt_addr)<<32) & 0xff00000000000000ULL;
+	write_ldt_descriptor(ldt_entry);
 }
 
 uint64_t get_tss_descriptor() {

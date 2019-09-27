@@ -4,6 +4,7 @@
 global loader
 global stack_ptr
 global write_tss_descriptor
+global write_ldt_descriptor
 global gdt_start
 
 ; Macro to build a GDT descriptor entry
@@ -16,6 +17,8 @@ global gdt_start
     ((flags & 0x0F) << 52))
 
 extern main
+extern do_task1
+extern do_task2
 
 MODULEALIGN equ 1<<0
 MEMINFO equ 1<<1
@@ -38,15 +41,23 @@ write_tss_descriptor: ; assume argument should be a uint64_t type variable.
 	mov eax, [esp + 4]
 	mov [gdt32_tss], eax
 	mov eax, [esp + 8]
-	mov [gdt32_tss], eax
+	mov [gdt32_tss + 4], eax
 	ret
 
 write_ldt_descriptor:
 	mov eax, [esp + 4]
 	mov [gdt32_ldt], eax
 	mov eax, [esp + 8]
-	mov [gdt32_ldt], eax
+	mov [gdt32_ldt + 4], eax
 	ret
+
+task1_run:
+	call do_task1
+	jmp task1_run
+
+task2_run:
+	call do_task2
+	jmp task2_run
 
 loader:
 	mov esp, stack+STACKSIZE
@@ -54,6 +65,7 @@ loader:
 	push ebx
 	lgdt [gdtr]
 	jmp CODE32_SEL:.setcs
+
 .setcs:
 	mov ax, DATA32_SEL					; Setup the segment registers with our flat data selector
 	mov ds, ax
