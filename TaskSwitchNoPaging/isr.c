@@ -1,6 +1,9 @@
 #include "port_io.h"
 #include "keyboard_map.h"
 #include "utils.h"
+#include "stdint.h"
+
+extern void scheduler();
 
 void kb_init(void)
 {
@@ -19,8 +22,18 @@ void keyboard_handler(void)
 	write_port(0x20, 0x20);
 }
 
+uint32_t time_frame = 0;
+uint32_t cur_task = 0;
 void timer_handler() {
-	/* vidptr[current_loc++] = '.'; */
-	/* vidptr[current_loc++] = 0x07; */
+	time_frame++;
 	write_port(0x20, 0x20);
+	if (time_frame == SWITCH_PERIOD) {
+		// The interrupt guardiand here, scope between "cli" and "sti", is necessary because we
+		// don't want the timer ISR is stopped by another timer interrupt.
+		cli();
+		time_frame = 0;
+		scheduler();
+		sti();
+	} else
+		time_frame++;
 }

@@ -18,6 +18,7 @@
 #define PIC_1_DATA 0x21
 #define PIC_2_DATA 0xA1
 #define sti() __asm__ ("sti\n\t")
+#define cli() __asm__ ("cli\n\t")
 
 void keyboard_handler_int();
 void timer_handler_int();
@@ -115,17 +116,15 @@ struct Task get_task0() {
 
 void do_task1() {
 	char *show = "Task1 !!!!";
-	for (uint8_t i = 0; i < 10; i++, loc++) {
+	for (uint8_t i = 0; i < 10; i++) {
 		puts(show);
 	}
 }
 
 void do_task2() {
 	char *show = "Task2 !!!!";
-	for (uint8_t i = 0; i < 10; i++, loc++) {
-		if (loc == COLS * ROWS)
-			loc = 0;
-		video[loc] = 0x07 << 8 | show[i];
+	for (uint8_t i = 0; i < 10; i++) {
+		puts(show);
 	}
 }
 
@@ -134,6 +133,7 @@ void clear() {
     for (y = 0; y < ROWS; y++)
         for (x = 0; x < COLS; x++)
             putc(' ');
+	loc = 0;
 }
 
 void new_task(struct Task *new_task, struct Task *task0, uintptr_t eip, uintptr_t stack0_addr, uintptr_t stack3_addr) {
@@ -149,6 +149,13 @@ void new_task(struct Task *new_task, struct Task *task0, uintptr_t eip, uintptr_
 	new_task->state = RUNABLE;
 }
 
+// Temporarily, we declare tasks as global variable for following several reasons. However
+// it maybe issue in the future.
+// 1. We need task0 as template while creating new task.
+// 2. scheduler function in task.c need to access tasks.
+struct Task task0 = get_task0();
+struct Task task1, task2;
+
 int __attribute__((noreturn)) main() {
     clear(BLACK);
 	// Interrupt related operations
@@ -159,8 +166,6 @@ int __attribute__((noreturn)) main() {
 	char wheel[] = {'\\', '|', '/', '-'};
 	int i = 0;
 
-	struct Task task0 = get_task0();
-	struct Task task1, task2;
 	set_tss((uintptr_t) &(task0.tss));
 	set_ldt((uintptr_t) &(task0.ldt));
 	__asm__("ltrw %%ax\n\t"::"a"(GLOBAL_TSS_SEL));
@@ -206,15 +211,6 @@ int __attribute__((noreturn)) main() {
 			"movw %%cx,%%fs\n\t" \
 			"movw %%cx,%%gs" \
 			::"b"(LOCAL_CODE_SEL),"c"(LOCAL_DATA_SEL));
-
-	for (;;) {
-		/* __asm__ ("movb    %%al,    0xb8000+160*24"::"a"(wheel[i])); */
-		puts("hello");
-		if (i == sizeof wheel)
-			i = 0;
-		else
-			++i;
-	}
-	puts("hello");
-	return 0;
+	roll_wheel('0', GRAY, BLACK);
+	while(1);
 }
