@@ -86,22 +86,21 @@ void idt_init() {
 }
 
 struct Task get_task0() {
-	struct TaskStateSeg task0_tss = {
-		.back_link = 0,
-		.esp0 = (uintptr_t)task0_stack0 + 256 * sizeof(uint32_t),
-		.ss0 = GLOBAL_DATA_SEL,
-		.esp1 = 0, .ss1 = 0, .esp2 = 0, .ss2 = 0,
-		.cr3 = 0,
-		.eip = &task1_run, .eflags = 0,
-		.eax = 0, .ecx = 0, .edx = 0, .ebx = 0,
-		.esi = 0, .edi = 0,
-		.es = LOCAL_DATA_SEL, .cs = LOCAL_CODE_SEL, .ds = LOCAL_DATA_SEL,
-		.ss = LOCAL_DATA_SEL, .fs = LOCAL_DATA_SEL, .gs = LOCAL_DATA_SEL,
-		.ldt = 0x20, // 4th entry of GDT
-		.trace_bitmap = 0x00000000
-	};
 	struct Task task0 = {
-		.tss = task0_tss,
+		.tss = {
+			.back_link = 0,
+			.esp0 = &task0_stack0 + 256 * sizeof(uint32_t),
+			.ss0 = GLOBAL_DATA_SEL,
+			.esp1 = 0, .ss1 = 0, .esp2 = 0, .ss2 = 0,
+			.cr3 = 0,
+			.eip = 0, .eflags = 0,
+			.eax = 0, .ecx = 0, .edx = 0, .ebx = 0,
+			.esi = 0, .edi = 0,
+			.es = LOCAL_DATA_SEL, .cs = LOCAL_CODE_SEL, .ds = LOCAL_DATA_SEL,
+			.ss = LOCAL_DATA_SEL, .fs = LOCAL_DATA_SEL, .gs = LOCAL_DATA_SEL,
+			.ldt = 0x20, // 4th entry of GDT
+			.trace_bitmap = 0x00000000
+		},
 		.tss_entry = 0,
 		.ldt = {DEFAULT_LDT_CODE_SEG_DESCRIPTOR, DEFAULT_LDT_DATA_SEG_DESCRIPTOR},
 		.ldt_entry = 0,
@@ -114,7 +113,8 @@ struct Task get_task0() {
 
 void do_task1() {
 	uint16_t *const out = (uint16_t*) 0xB8000;
-    out[loc++] = 0x07 << 8 | 'A';
+	puts("<<<< this is task1 >>>>");
+	while(1);
 }
 
 void do_task2() {
@@ -160,8 +160,17 @@ int __attribute__((noreturn)) main() {
 	load_idt_entry(0x20, (unsigned long) timer_handler_int, 0x08, 0x8e);
 	kb_init();
 	scheduled_tasks[0] = get_task0();
-	set_tss((uintptr_t) &(current_task->tss));
-	set_ldt((uintptr_t) &(current_task->ldt));
+	/* set_tss((uintptr_t) &(current_task->tss)); */
+	print_hex_uint32(gdt32_tss[0]);
+	print_hex_uint32(gdt32_tss[1]);
+	uint64_t tss_entry = set_tss((uint32_t) &(current_task->tss));
+	uint64_t ldt_entry = set_ldt((uint32_t) &(current_task->ldt));
+	uint32_t *v = (uint32_t *)&tss_entry;
+	gdt32_tss[0] = *v;
+	gdt32_tss[1] = *(v+1);
+	v = (uint32_t *)&ldt_entry;
+	gdt32_tss[2] = *v;
+	gdt32_tss[3] = *(v+1);
 	__asm__("ltrw %%ax\n\t"::"a"(GLOBAL_TSS_SEL));
 	__asm__("lldt %%ax\n\t"::"a"(GLOBAL_LDT_SEL));
 
@@ -176,6 +185,7 @@ int __attribute__((noreturn)) main() {
 	// instructions affects the value in eflags and that's the reason why we have
 	// to turn it on.
 
+	sti();
 	new_task(scheduled_tasks+1, current_task,
 		(uint32_t) &task1_run,
 		(uint32_t) (&task1_stack0 + 1024 * sizeof(uint32_t)),
@@ -187,7 +197,6 @@ int __attribute__((noreturn)) main() {
 		(uint32_t) (&task2_stack3 + 1024 * sizeof(uint32_t))
 	);
 
-	sti();
 
 	// Reference inline assembly follow AT&T syntex
 	// https://wiki.osdev.org/Inline_Assembly
@@ -195,13 +204,13 @@ int __attribute__((noreturn)) main() {
 	// "%%" represent "argument" from C code instead of normal registers. 'a' refers
 	// to EAX, 'b' to EBX, 'c' to ECX, 'd' to EDX, 'S' to ESI, and 'D' to EDI. Two
 	// consecutive colons means "no output" from assembly template.
-	__asm__ __volatile__("call 0x18\n\t");
 	__asm__ ("movl %%esp,%%eax\n\t" \
 			"pushl %%ecx\n\t" \
 			"pushl %%eax\n\t" \
 			"pushfl\n\t" \
 			"pushl %%ebx\n\t" \
 			"pushl $1f\n\t" \
+			"iret\n" \
 			"1:\tmovw %%cx,%%ds\n\t" \
 			"movw %%cx,%%es\n\t" \
 			"movw %%cx,%%fs\n\t" \

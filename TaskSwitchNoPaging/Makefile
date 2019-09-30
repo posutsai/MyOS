@@ -18,7 +18,7 @@ main.o: main.c
 	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Iinclude -o '$@' -Wall -Wextra '$<'
 isr.o: isr.c
 	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Iinclude -o '$@' -Wall -Wextra '$<'
-utils.o: utils.c
+utils.o: utils.c utils.h
 	gcc -c -m32 -std=c99 -ffreestanding -fno-builtin -nostdlib --short-enums -Os -Iinclude -o '$@' -Wall -Wextra '$<'
 
 clean:

@@ -28,8 +28,8 @@
 #define INITIAL_PRIORITY 200
 struct Task;
 struct TaskStateSeg;
-const uint64_t *gdt_start;
-const uint32_t *gdt32_tss;
+const uint64_t gdt_start[];
+extern uint32_t gdt32_tss[];
 extern void write_tss_descriptor(uint64_t);
 extern void write_ldt_descriptor(uint64_t);
 extern struct Task *current_task;
@@ -85,7 +85,10 @@ uint64_t set_tss(uint64_t tss_addr) {
 	uint64_t tss_entry = 0x0080890000000067ULL; // initialize base as 0
 	tss_entry |= ((tss_addr) << 16) & 0xffffff0000ULL;
 	tss_entry |= ((tss_addr) << 32) & 0xff00000000000000ULL;
-	write_tss_descriptor(tss_entry);
+	uint32_t *ptr = (uint32_t *)&tss_entry;
+	gdt32_tss[0] = ptr[0];
+	gdt32_tss[1] = ptr[1];
+	// write_tss_descriptor(tss_entry);
 	return tss_entry;
 }
 
@@ -93,7 +96,10 @@ uint64_t set_ldt(uint64_t ldt_addr) {
 	uint64_t ldt_entry = 0x008082000000000fULL;
 	ldt_entry |= ((ldt_addr)<<16) & 0xffffff0000ULL;
 	ldt_entry |= ((ldt_addr)<<32) & 0xff00000000000000ULL;
-	write_ldt_descriptor(ldt_entry);
+	// write_ldt_descriptor(ldt_entry);
+	uint32_t *ptr = (uint32_t *)&ldt_entry;
+	gdt32_tss[2] = ptr[0];
+	gdt32_tss[3] = ptr[1];
 	return ldt_entry;
 }
 
@@ -107,7 +113,7 @@ uint64_t get_ldt_descriptor() {
 
 // This array space should be locate in .data section instead .bss section. The
 // requirement of placing it into .bss is "initialization".
-static uint32_t task0_stack0[256] = {0xF};
+static uint32_t task0_stack0[256] = {[0 ... 255] = 0xFFFFFFFF};
 
 static uint32_t task1_stack0[1024] = {0xF};
 static uint32_t task1_stack3[1024] = {0xF};
@@ -128,5 +134,5 @@ void scheduler() {
 	next_task->tss_entry = set_tss((uintptr_t)&(next_task->tss));
 	next_task->ldt_entry = set_ldt((uintptr_t)&(next_task->ldt));
 
-	__asm__ __volatile__("call *%0\n\t"::"a"(&gdt32_tss));
+	__asm__ __volatile__("ljmp $0x18, $0");
 }

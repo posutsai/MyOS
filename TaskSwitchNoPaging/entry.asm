@@ -2,7 +2,6 @@
 ; 1. Print text with VGA video text mode: https://github.com/cirosantilli/x86-bare-metal-examples/tree/master/multiboot/hello-world
 ; 2. Register a keyboard handler: https://stackoverflow.com/questions/37618111/keyboard-irq-within-an-x86-kernel
 global loader
-global stack_ptr
 global write_tss_descriptor
 global write_ldt_descriptor
 global gdt_start
@@ -55,8 +54,6 @@ write_ldt_descriptor:
 	ret
 
 task1_run:
-	mov eax, 0x0765
-	mov [0xb8000], eax
 	call do_task1
 	jmp task1_run
 

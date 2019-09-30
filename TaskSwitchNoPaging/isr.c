@@ -31,7 +31,7 @@ void timer_handler() {
 		/* putc('*'); */
 		cli();
 		time_frame = 0;
-		/* scheduler(); */
+		scheduler();
 		sti();
 	} else {
 		time_frame++;
