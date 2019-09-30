@@ -17,14 +17,12 @@
 #define PIC_2_CTRL 0xA0
 #define PIC_1_DATA 0x21
 #define PIC_2_DATA 0xA1
-#define sti() __asm__ ("sti\n\t")
-#define cli() __asm__ ("cli\n\t")
 
 void keyboard_handler_int();
 void timer_handler_int();
 void load_idt(void*);
-const uintptr_t task1_run;
-const uintptr_t task2_run;
+extern const uint32_t task1_run[];
+extern const uint32_t task2_run[];
 
 struct idt_entry {
 	unsigned short int offset_lowerbits;
@@ -94,7 +92,7 @@ struct Task get_task0() {
 		.ss0 = GLOBAL_DATA_SEL,
 		.esp1 = 0, .ss1 = 0, .esp2 = 0, .ss2 = 0,
 		.cr3 = 0,
-		.eip = 0, .eflags = 0,
+		.eip = &task1_run, .eflags = 0,
 		.eax = 0, .ecx = 0, .edx = 0, .ebx = 0,
 		.esi = 0, .edi = 0,
 		.es = LOCAL_DATA_SEL, .cs = LOCAL_CODE_SEL, .ds = LOCAL_DATA_SEL,
@@ -115,10 +113,8 @@ struct Task get_task0() {
 }
 
 void do_task1() {
-	char *show = "Task1 !!!!";
-	for (uint8_t i = 0; i < 10; i++) {
-		puts(show);
-	}
+	uint16_t *const out = (uint16_t*) 0xB8000;
+    out[loc++] = 0x07 << 8 | 'A';
 }
 
 void do_task2() {
@@ -136,7 +132,7 @@ void clear() {
 	loc = 0;
 }
 
-void new_task(struct Task *new_task, struct Task *task0, uintptr_t eip, uintptr_t stack0_addr, uintptr_t stack3_addr) {
+void new_task(struct Task *new_task, struct Task *task0, uint32_t eip, uint32_t stack0_addr, uint32_t stack3_addr) {
 	memcpy(new_task, task0, sizeof(struct Task));
 	new_task->tss.esp0 = stack0_addr;
 	new_task->tss.eip = eip;
@@ -153,21 +149,19 @@ void new_task(struct Task *new_task, struct Task *task0, uintptr_t eip, uintptr_
 // it maybe issue in the future.
 // 1. We need task0 as template while creating new task.
 // 2. scheduler function in task.c need to access tasks.
-struct Task task0 = get_task0();
-struct Task task1, task2;
-
+struct Task scheduled_tasks[3];
+struct Task *current_task;
 int __attribute__((noreturn)) main() {
     clear(BLACK);
+	current_task = scheduled_tasks;
 	// Interrupt related operations
 	idt_init();
 	load_idt_entry(0x21, (unsigned long) keyboard_handler_int, 0x08, 0x8e);
 	load_idt_entry(0x20, (unsigned long) timer_handler_int, 0x08, 0x8e);
 	kb_init();
-	char wheel[] = {'\\', '|', '/', '-'};
-	int i = 0;
-
-	set_tss((uintptr_t) &(task0.tss));
-	set_ldt((uintptr_t) &(task0.ldt));
+	scheduled_tasks[0] = get_task0();
+	set_tss((uintptr_t) &(current_task->tss));
+	set_ldt((uintptr_t) &(current_task->ldt));
 	__asm__("ltrw %%ax\n\t"::"a"(GLOBAL_TSS_SEL));
 	__asm__("lldt %%ax\n\t"::"a"(GLOBAL_LDT_SEL));
 
@@ -181,18 +175,19 @@ int __attribute__((noreturn)) main() {
 	// re-enabling interrupts" section in the webpage, both "cli" and "sti"
 	// instructions affects the value in eflags and that's the reason why we have
 	// to turn it on.
-	sti();
 
-	new_task(&task1, &task0,
-		(uintptr_t)task1_run,
-		(uintptr_t)task1_stack0 + 1024 * sizeof(uint32_t),
-		(uintptr_t)task1_stack3 + 1024 * sizeof(uint32_t)
+	new_task(scheduled_tasks+1, current_task,
+		(uint32_t) &task1_run,
+		(uint32_t) (&task1_stack0 + 1024 * sizeof(uint32_t)),
+		(uint32_t) (&task1_stack3 + 1024 * sizeof(uint32_t))
 	);
-	new_task(&task2, &task0,
-		(uintptr_t)task2_run,
-		(uintptr_t)task2_stack0 + 1024 * sizeof(uint32_t),
-		(uintptr_t)task2_stack3 + 1024 * sizeof(uint32_t)
+	new_task(&scheduled_tasks[2], current_task,
+		(uint32_t) &task2_run,
+		(uint32_t) (&task2_stack0 + 1024 * sizeof(uint32_t)),
+		(uint32_t) (&task2_stack3 + 1024 * sizeof(uint32_t))
 	);
+
+	sti();
 
 	// Reference inline assembly follow AT&T syntex
 	// https://wiki.osdev.org/Inline_Assembly
@@ -200,6 +195,7 @@ int __attribute__((noreturn)) main() {
 	// "%%" represent "argument" from C code instead of normal registers. 'a' refers
 	// to EAX, 'b' to EBX, 'c' to ECX, 'd' to EDX, 'S' to ESI, and 'D' to EDI. Two
 	// consecutive colons means "no output" from assembly template.
+	__asm__ __volatile__("call 0x18\n\t");
 	__asm__ ("movl %%esp,%%eax\n\t" \
 			"pushl %%ecx\n\t" \
 			"pushl %%eax\n\t" \

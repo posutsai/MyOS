@@ -6,6 +6,9 @@ global stack_ptr
 global write_tss_descriptor
 global write_ldt_descriptor
 global gdt_start
+global gdt32_tss
+global task1_run
+global task2_run
 
 ; Macro to build a GDT descriptor entry
 %define MAKE_GDT_DESC(base, limit, access, flags) \
@@ -52,6 +55,8 @@ write_ldt_descriptor:
 	ret
 
 task1_run:
+	mov eax, 0x0765
+	mov [0xb8000], eax
 	call do_task1
 	jmp task1_run
 

@@ -23,17 +23,17 @@ void keyboard_handler(void)
 }
 
 uint32_t time_frame = 0;
-uint32_t cur_task = 0;
 void timer_handler() {
-	time_frame++;
 	write_port(0x20, 0x20);
 	if (time_frame == SWITCH_PERIOD) {
 		// The interrupt guardiand here, scope between "cli" and "sti", is necessary because we
 		// don't want the timer ISR is stopped by another timer interrupt.
+		/* putc('*'); */
 		cli();
 		time_frame = 0;
-		scheduler();
+		/* scheduler(); */
 		sti();
-	} else
+	} else {
 		time_frame++;
+	}
 }

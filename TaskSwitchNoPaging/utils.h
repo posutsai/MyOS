@@ -4,7 +4,9 @@
 #define COLS 80
 #define ROWS 25
 #define WHEEL_SPEED 50
-#define SWITCH_PERIOD 20
+#define SWITCH_PERIOD 5
+#define sti() __asm__ ("sti\n\t")
+#define cli() __asm__ ("cli\n\t")
 
 enum color {
     BLACK = 0,
