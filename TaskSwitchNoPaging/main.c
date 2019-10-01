@@ -89,7 +89,7 @@ struct Task get_task0() {
 	struct Task task0 = {
 		.tss = {
 			.back_link = 0,
-			.esp0 = &task0_stack0 + 256 * sizeof(uint32_t),
+			.esp0 = (uint32_t)&task0_stack0 + 256 * sizeof(uint32_t),
 			.ss0 = GLOBAL_DATA_SEL,
 			.esp1 = 0, .ss1 = 0, .esp2 = 0, .ss2 = 0,
 			.cr3 = 0,
@@ -112,16 +112,14 @@ struct Task get_task0() {
 }
 
 void do_task1() {
-	uint16_t *const out = (uint16_t*) 0xB8000;
 	puts("<<<< this is task1 >>>>");
 	while(1);
 }
 
 void do_task2() {
 	char *show = "Task2 !!!!";
-	for (uint8_t i = 0; i < 10; i++) {
-		puts(show);
-	}
+	puts(show);
+	while(1);
 }
 
 void clear() {
@@ -160,17 +158,8 @@ int __attribute__((noreturn)) main() {
 	load_idt_entry(0x20, (unsigned long) timer_handler_int, 0x08, 0x8e);
 	kb_init();
 	scheduled_tasks[0] = get_task0();
-	/* set_tss((uintptr_t) &(current_task->tss)); */
-	print_hex_uint32(gdt32_tss[0]);
-	print_hex_uint32(gdt32_tss[1]);
-	uint64_t tss_entry = set_tss((uint32_t) &(current_task->tss));
-	uint64_t ldt_entry = set_ldt((uint32_t) &(current_task->ldt));
-	uint32_t *v = (uint32_t *)&tss_entry;
-	gdt32_tss[0] = *v;
-	gdt32_tss[1] = *(v+1);
-	v = (uint32_t *)&ldt_entry;
-	gdt32_tss[2] = *v;
-	gdt32_tss[3] = *(v+1);
+	set_tss((uint32_t) &(current_task->tss));
+	set_ldt((uint32_t) &(current_task->ldt));
 	__asm__("ltrw %%ax\n\t"::"a"(GLOBAL_TSS_SEL));
 	__asm__("lldt %%ax\n\t"::"a"(GLOBAL_LDT_SEL));
 

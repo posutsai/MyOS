@@ -28,7 +28,6 @@ void timer_handler() {
 	if (time_frame == SWITCH_PERIOD) {
 		// The interrupt guardiand here, scope between "cli" and "sti", is necessary because we
 		// don't want the timer ISR is stopped by another timer interrupt.
-		/* putc('*'); */
 		cli();
 		time_frame = 0;
 		scheduler();

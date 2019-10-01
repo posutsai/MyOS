@@ -6,6 +6,7 @@ global write_tss_descriptor
 global write_ldt_descriptor
 global gdt_start
 global gdt32_tss
+global gdt32_ldt
 global task1_run
 global task2_run
 

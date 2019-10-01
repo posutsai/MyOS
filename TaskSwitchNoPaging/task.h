@@ -28,8 +28,9 @@
 #define INITIAL_PRIORITY 200
 struct Task;
 struct TaskStateSeg;
-const uint64_t gdt_start[];
-extern uint32_t gdt32_tss[];
+const uint64_t gdt_start[5];
+extern uint32_t gdt32_tss[2];
+extern uint32_t gdt32_ldt[2];
 extern void write_tss_descriptor(uint64_t);
 extern void write_ldt_descriptor(uint64_t);
 extern struct Task *current_task;
@@ -98,8 +99,8 @@ uint64_t set_ldt(uint64_t ldt_addr) {
 	ldt_entry |= ((ldt_addr)<<32) & 0xff00000000000000ULL;
 	// write_ldt_descriptor(ldt_entry);
 	uint32_t *ptr = (uint32_t *)&ldt_entry;
-	gdt32_tss[2] = ptr[0];
-	gdt32_tss[3] = ptr[1];
+	gdt32_ldt[0] = ptr[0];
+	gdt32_ldt[1] = ptr[1];
 	return ldt_entry;
 }
 
